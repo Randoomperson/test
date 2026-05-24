@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mistake Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A2E">
+<meta name="description" content="Track student mistakes across your groups">
+<link rel="apple-touch-icon" id="appleIcon">
+<title>Mistake Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --dark: #1A1A2E; --gold: #E8C547; --radius: 14px; }
+
+body { font-family: 'DM Sans', sans-serif; background: #F4F5F8; min-height: 100vh; padding-bottom: 80px; }
+
+/* ── HEADER ── */
+header { background: var(--dark); padding: 18px 20px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+.header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.logo { font-size: 30px; }
+.app-title { font-family: 'Playfair Display', serif; font-size: 21px; color: #fff; font-weight: 900; letter-spacing: -0.5px; }
+.app-subtitle { font-size: 12px; color: #7777aa; margin-top: 2px; }
+.header-controls { display: flex; gap: 8px; align-items: center; }
+.add-group-row { display: flex; gap: 8px; flex: 1; }
+.add-group-row input {
+  flex: 1; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 8px 13px; color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+.add-group-row input::placeholder { color: #555; }
+.add-group-row input:focus { border-color: var(--gold); }
+.btn-add-group {
+  background: var(--gold); color: var(--dark); border: none; border-radius: 10px;
+  padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+.btn-add-group:active { opacity: 0.8; }
+
+/* Edit mode toggle */
+.btn-mode {
+  border: 2px solid rgba(255,255,255,0.25); border-radius: 10px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 7px 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.btn-mode.active { background: var(--gold); border-color: var(--gold); color: var(--dark); }
+.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.2s; }
+.btn-mode.active .mode-dot { background: var(--dark); }
+
+/* edit mode banner */
+.edit-banner {
+  display: none; background: #fff3cd; border-bottom: 2px solid var(--gold);
+  padding: 8px 20px; text-align: center; font-size: 13px; font-weight: 700; color: #7a5c00;
+}
+.edit-banner.show { display: block; }
+
+/* ── GRID ── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; padding: 18px 16px; max-width: 1100px; margin: 0 auto; }
+.empty-state { grid-column: 1/-1; text-align: center; padding: 70px 20px; color: #aaa; }
+.empty-state .icon { font-size: 52px; display: block; margin-bottom: 14px; }
+.empty-state p { font-size: 15px; }
+
+/* ── CARD ── */
+.card { border-radius: var(--radius); padding: 18px; box-shadow: 0 2px 14px rgba(0,0,0,0.08); animation: slideIn 0.25s ease; transition: box-shadow 0.2s; }
+.card.edit-mode { box-shadow: 0 4px 20px rgba(0,0,0,0.14); }
+@keyframes slideIn { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
+
+.card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.group-name { flex:1; font-family:'Playfair Display',serif; font-size:18px; font-weight:700; border:none; background:transparent; padding:2px 0; outline:none; width:100%; }
+.group-name-input { flex:1; font-family:'Playfair Display',serif; font-size:17px; font-weight:700; border:1.5px solid #ccc; border-radius:7px; padding:3px 8px; outline:none; background:#fff; }
+.btn-icon { background:none; border:none; cursor:pointer; font-size:15px; color:#ccc; border-radius:6px; padding:3px 6px; transition:all 0.15s; line-height:1; }
+.btn-icon:hover, .btn-icon:active { color:#e53935; background:rgba(229,57,53,0.08); }
+
+.card-stats { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.2px; }
+
+/* ── STUDENT LIST ── */
+.student-list { margin-bottom:12px; }
+.no-students { text-align:center; color:#bbb; font-size:13px; padding:10px 0; }
+
+.student-row { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.06); gap:8px; }
+.drag-handle { cursor:grab; font-size:18px; color:#ccc; padding:0 2px; display:none; user-select:none; touch-action:none; }
+.edit-mode .drag-handle { display:block; }
+.student-row.dragging { opacity:0.45; }
+.student-row.drag-over { border-top:2px solid #1565C0; }
+.student-name { flex:1; font-size:15px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#222; }
+
+/* ── COUNTER ── */
+.counter { display:flex; align-items:center; gap:4px; }
+.counter-btn {
+  width:30px; height:30px; border-radius:8px; border:2px solid; background:white;
+  font-size:20px; font-weight:700; cursor:pointer; display:none; align-items:center; justify-content:center;
+  line-height:1; transition:opacity 0.1s, transform 0.1s; font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+}
+.edit-mode .counter-btn { display:flex; }
+.counter-btn:active { opacity:0.6; transform:scale(0.9); }
+.counter-num { min-width:36px; text-align:center; font-weight:800; font-size:17px; border-radius:7px; padding:2px 4px; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+
+/* ── EDIT-ONLY UI ── */
+.add-student-row { display:flex; gap:8px; margin-top:4px; display:none; }
+.edit-mode .add-student-row { display:flex; }
+.add-student-row input {
+  flex:1; border:1.5px solid #E0E0E0; border-radius:9px; padding:7px 11px;
+  font-family:'DM Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.2s; background:#fff;
+}
+.add-student-row input:focus { border-color:#888; }
+.btn-add-student { border:none; border-radius:9px; padding:7px 13px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:13px; color:#fff; cursor:pointer; white-space:nowrap; transition:filter 0.15s; -webkit-tap-highlight-color:transparent; }
+.btn-add-student:active { filter:brightness(0.85); }
+
+/* delete student btn only in edit mode */
+.del-student { display:none; }
+.edit-mode .del-student { display:inline-block; }
+
+/* edit mode card footer */
+.card-edit-footer { display:none; margin-top:12px; padding-top:10px; border-top:1px dashed rgba(0,0,0,0.1); }
+.edit-mode .card-edit-footer { display:flex; gap:8px; justify-content:flex-end; }
+
+/* add/remove group only in edit mode */
+.edit-only { display:none !important; }
+body.in-edit .edit-only { display:flex !important; }
+
+/* ── SAVE BUTTON (floating) ── */
+.fab-save {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) scale(0);
+  background: #2e7d32; color: #fff; border: none; border-radius: 50px;
+  padding: 14px 32px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 16px;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 200;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), background 0.2s;
+  white-space: nowrap;
+}
+.fab-save.show { transform: translateX(-50%) scale(1); }
+.fab-save:active { background: #1b5e20; }
+
+/* ── CONFIRMATION MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 500; align-items: center; justify-content: center; padding: 16px;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 18px; max-width: 480px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: popIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  max-height: 85vh; display: flex; flex-direction: column;
+}
+@keyframes popIn { from { opacity:0; transform:scale(0.85);} to { opacity:1; transform:scale(1);} }
+.modal-header { padding: 20px 22px 14px; border-bottom: 1px solid #f0f0f0; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: #1A1A2E; }
+.modal-subtitle { font-size: 13px; color: #888; margin-top: 3px; }
+.modal-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+.change-section { margin-bottom: 14px; }
+.change-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 8px; }
+.change-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; font-size: 14px; }
+.change-item.added { background: #E8F5E9; color: #2e7d32; }
+.change-item.removed { background: #FFEBEE; color: #c62828; }
+.change-item.modified { background: #E3F2FD; color: #1565C0; }
+.change-item.reordered { background: #FFF3E0; color: #E65100; }
+.change-icon { font-size: 16px; flex-shrink: 0; }
+.no-changes { text-align: center; color: #bbb; padding: 20px 0; font-size: 14px; }
+.modal-footer { padding: 14px 22px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 10px; justify-content: flex-end; }
+.btn-discard { background: #f5f5f5; color: #555; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+.btn-discard:active { background: #e0e0e0; }
+.btn-confirm { background: #2e7d32; color: #fff; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+.btn-confirm:active { background: #1b5e20; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; padding: 12px; }
+  header { padding: 14px 14px 11px; }
+  .app-title { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span class="logo">✏️</span>
+    <div style="flex:1">
+      <div class="app-title">Mistake Tracker</div>
+      <div class="app-subtitle">Track student errors across your groups</div>
+    </div>
+    <button class="btn-mode" id="modeBtn" onclick="toggleMode()">
+      <span class="mode-dot"></span> Edit
+    </button>
+  </div>
+  <div class="header-controls">
+    <div class="add-group-row edit-only" id="addGroupRow">
+      <input type="text" id="newGroupInput" placeholder="New group name…" />
+      <button class="btn-add-group" onclick="addGroup()">+ Group</button>
+    </div>
+  </div>
+</header>
+
+<div class="edit-banner" id="editBanner">✏️ Edit Mode — drag to reorder, add or remove students, then tap Save</div>
+
+<div class="grid" id="grid">
+  <div class="empty-state" id="emptyState">
+    <span class="icon">📋</span>
+    <p>No groups yet. Switch to Edit Mode to create a group!</p>
+  </div>
+</div>
+
+<button class="fab-save" id="fabSave" onclick="openConfirm()">💾 Save Changes</button>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Review Changes</div>
+      <div class="modal-subtitle" id="modalSubtitle">Here's what will be saved</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-discard" onclick="discardChanges()">Discard</button>
+      <button class="btn-confirm" onclick="confirmSave()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  { bg:'#FFF3E0', accent:'#F57C00', light:'#FFE0B2' },
+  { bg:'#E8F5E9', accent:'#388E3C', light:'#C8E6C9' },
+  { bg:'#E3F2FD', accent:'#1565C0', light:'#BBDEFB' },
+  { bg:'#FCE4EC', accent:'#C62828', light:'#FFCDD2' },
+  { bg:'#F3E5F5', accent:'#6A1B9A', light:'#E1BEE7' },
+  { bg:'#E0F7FA', accent:'#00695C', light:'#B2EBF2' },
+];
+
+// ── STATE ──
+let groups = JSON.parse(localStorage.getItem('mistakeTrackerGroups') || '[]');
+let colorCounter = groups.length;
+let isEditMode = false;
+let snapshot = null; // deep copy before edits
+
+function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
+function uid() { return Math.random().toString(36).slice(2); }
+function save() { localStorage.setItem('mistakeTrackerGroups', JSON.stringify(groups)); }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── MODE ──
+function toggleMode() {
+  if (isEditMode) {
+    openConfirm();
+  } else {
+    enterEditMode();
+  }
+}
+
+function enterEditMode() {
+  isEditMode = true;
+  snapshot = deepClone(groups);
+  document.body.classList.add('in-edit');
+  document.getElementById('modeBtn').classList.add('active');
+  document.getElementById('modeBtn').innerHTML = '<span class="mode-dot"></span> Editing…';
+  document.getElementById('editBanner').classList.add('show');
+  document.getElementById('fabSave').classList.add('show');
+  document.getElementById('newGroupInput').value = '';
+  render();
+}
+
+function exitEditMode() {
+  isEditMode = false;
+  snapshot = null;
+  document.body.classList.remove('in-edit');
+  document.getElementById('modeBtn').classList.remove('active');
+  document.getElementById('modeBtn').innerHTML = '<span class="mode-dot"></span> Edit';
+  document.getElementById('editBanner').classList.remove('show');
+  document.getElementById('fabSave').classList.remove('show');
+  render();
+}
+
+// ── CONFIRMATION ──
+function openConfirm() {
+  const changes = computeChanges(snapshot, groups);
+  const body = document.getElementById('modalBody');
+  const subtitle = document.getElementById('modalSubtitle');
+
+  if (changes.length === 0) {
+    body.innerHTML = '<div class="no-changes">🟰 No changes were made.</div>';
+    subtitle.textContent = 'Nothing to save';
+  } else {
+    subtitle.textContent = `${changes.length} change${changes.length>1?'s':''} to save`;
+    // Group by category
+    const cats = { group: [], student: [], order: [], mistakes: [] };
+    changes.forEach(c => cats[c.cat].push(c));
+
+    let html = '';
+    if (cats.group.length) {
+      html += `<div class="change-section"><div class="change-section-title">Groups</div>`;
+      cats.group.forEach(c => { html += changeItem(c); });
+      html += `</div>`;
+    }
+    if (cats.student.length) {
+      html += `<div class="change-section"><div class="change-section-title">Students</div>`;
+      cats.student.forEach(c => { html += changeItem(c); });
+      html += `</div>`;
+    }
+    if (cats.order.length) {
+      html += `<div class="change-section"><div class="change-section-title">Order Changes</div>`;
+      cats.order.forEach(c => { html += changeItem(c); });
+      html += `</div>`;
+    }
+    if (cats.mistakes.length) {
+      html += `<div class="change-section"><div class="change-section-title">Mistake Counts</div>`;
+      cats.mistakes.forEach(c => { html += changeItem(c); });
+      html += `</div>`;
+    }
+    body.innerHTML = html;
+  }
+
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function changeItem(c) {
+  return `<div class="change-item ${c.type}"><span class="change-icon">${c.icon}</span><span>${escHtml(c.text)}</span></div>`;
+}
+
+function computeChanges(before, after) {
+  if (!before) return [];
+  const changes = [];
+
+  // Groups added/removed
+  const beforeIds = new Set(before.map(g => g.id));
+  const afterIds = new Set(after.map(g => g.id));
+
+  after.forEach(g => {
+    if (!beforeIds.has(g.id))
+      changes.push({ cat:'group', type:'added', icon:'➕', text:`Group added: "${g.name}"` });
+  });
+  before.forEach(g => {
+    if (!afterIds.has(g.id))
+      changes.push({ cat:'group', type:'removed', icon:'🗑️', text:`Group removed: "${g.name}"` });
+  });
+  // Group renamed
+  after.forEach(g => {
+    const bg = before.find(x => x.id === g.id);
+    if (bg && bg.name !== g.name)
+      changes.push({ cat:'group', type:'modified', icon:'✏️', text:`Group renamed: "${bg.name}" → "${g.name}"` });
+  });
+
+  // Per-group student changes
+  after.forEach(g => {
+    const bg = before.find(x => x.id === g.id);
+    if (!bg) return;
+    const bIds = new Set(bg.students.map(s => s.id));
+    const aIds = new Set(g.students.map(s => s.id));
+
+    g.students.forEach(s => {
+      if (!bIds.has(s.id))
+        changes.push({ cat:'student', type:'added', icon:'➕', text:`"${s.name}" added to ${g.name}` });
+    });
+    bg.students.forEach(s => {
+      if (!aIds.has(s.id))
+        changes.push({ cat:'student', type:'removed', icon:'🗑️', text:`"${s.name}" removed from ${g.name}` });
+    });
+
+    // Order changed
+    const commonBefore = bg.students.filter(s => aIds.has(s.id)).map(s => s.id);
+    const commonAfter  = g.students.filter(s => bIds.has(s.id)).map(s => s.id);
+    if (JSON.stringify(commonBefore) !== JSON.stringify(commonAfter))
+      changes.push({ cat:'order', type:'reordered', icon:'↕️', text:`Student order changed in "${g.name}"` });
+
+    // Mistake counts
+    g.students.forEach(s => {
+      const bs = bg.students.find(x => x.id === s.id);
+      if (bs && bs.mistakes !== s.mistakes) {
+        const delta = s.mistakes - bs.mistakes;
+        changes.push({ cat:'mistakes', type:'modified', icon: delta>0?'📈':'📉',
+          text:`${s.name} (${g.name}): ${bs.mistakes} → ${s.mistakes} (${delta>0?'+':''}${delta})` });
+      }
+    });
+  });
+
+  return changes;
+}
+
+function confirmSave() {
+  save();
+  document.getElementById('modalOverlay').classList.remove('show');
+  exitEditMode();
+}
+
+function discardChanges() {
+  groups = deepClone(snapshot);
+  document.getElementById('modalOverlay').classList.remove('show');
+  exitEditMode();
+}
+
+// ── GROUP ACTIONS ──
+function addGroup() {
+  const input = document.getElementById('newGroupInput');
+  const name = input.value.trim();
+  if (!name) return;
+  groups.push({ id: uid(), name, colorIdx: colorCounter++ % COLORS.length, students: [] });
+  input.value = '';
+  render();
+}
+
+function removeGroup(gid) {
+  if (!confirm('Remove this group?')) return;
+  groups = groups.filter(g => g.id !== gid);
+  render();
+}
+
+function renameGroup(gid, name) {
+  const g = groups.find(x => x.id === gid);
+  if (g && name.trim()) g.name = name.trim();
+  render();
+}
+
+// ── STUDENT ACTIONS ──
+function addStudent(gid) {
+  const input = document.getElementById('si-' + gid);
+  const name = input.value.trim();
+  if (!name) return;
+  const g = groups.find(x => x.id === gid);
+  g.students.push({ id: uid(), name, mistakes: 0 });
+  input.value = '';
+  renderStudentList(gid);
+  updateStats(gid);
+}
+
+function removeStudent(gid, sid) {
+  const g = groups.find(x => x.id === gid);
+  g.students = g.students.filter(s => s.id !== sid);
+  renderStudentList(gid);
+  updateStats(gid);
+}
+
+function changeMistakes(gid, sid, delta) {
+  const g = groups.find(x => x.id === gid);
+  const s = g.students.find(x => x.id === sid);
+  s.mistakes = Math.max(0, s.mistakes + delta);
+  // update just the counter num in-place
+  const card = document.getElementById('card-' + gid);
+  const row = card.querySelector(`[data-sid="${sid}"]`);
+  if (row) {
+    const c = COLORS[g.colorIdx];
+    const num = row.querySelector('.counter-num');
+    num.textContent = s.mistakes;
+    num.style.color = s.mistakes === 0 ? '#aaa' : c.accent;
+    num.style.background = s.mistakes > 0 ? c.light : 'transparent';
+  }
+  updateStats(gid);
+  if (!isEditMode) save();
+}
+
+function updateStats(gid) {
+  const g = groups.find(x => x.id === gid);
+  const card = document.getElementById('card-' + gid);
+  if (!card) return;
+  const total = g.students.reduce((a, s) => a + s.mistakes, 0);
+  card.querySelector('.stat-students').textContent = g.students.length + ' students';
+  card.querySelector('.stat-mistakes').textContent = total + ' total mistakes';
+}
+
+// ── DRAG & DROP (touch + mouse) ──
+let dragSrc = null, dragGid = null;
+
+function initDrag(card, gid) {
+  const list = card.querySelector('.student-list');
+
+  function getRows() { return [...list.querySelectorAll('.student-row')]; }
+
+  function reorderFromDom() {
+    const g = groups.find(x => x.id === gid);
+    const newOrder = getRows().map(r => r.dataset.sid);
+    g.students = newOrder.map(id => g.students.find(s => s.id === id)).filter(Boolean);
+  }
+
+  // ── Mouse drag ──
+  list.addEventListener('dragstart', e => {
+    const row = e.target.closest('.student-row');
+    if (!row) return;
+    dragSrc = row;
+    dragGid = gid;
+    setTimeout(() => row.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  list.addEventListener('dragend', e => {
+    const row = e.target.closest('.student-row');
+    if (row) row.classList.remove('dragging');
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    reorderFromDom();
+  });
+  list.addEventListener('dragover', e => {
+    e.preventDefault();
+    const row = e.target.closest('.student-row');
+    if (!row || row === dragSrc) return;
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    row.classList.add('drag-over');
+    const rect = row.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) list.insertBefore(dragSrc, row);
+    else list.insertBefore(dragSrc, row.nextSibling);
+  });
+  list.addEventListener('drop', e => { e.preventDefault(); });
+
+  // ── Touch drag ──
+  let touchRow = null, clone = null, touchOffsetY = 0;
+
+  list.addEventListener('touchstart', e => {
+    const handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    touchRow = handle.closest('.student-row');
+    if (!touchRow) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const rect = touchRow.getBoundingClientRect();
+    touchOffsetY = t.clientY - rect.top;
+
+    clone = touchRow.cloneNode(true);
+    clone.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.85;z-index:999;pointer-events:none;background:white;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.2);`;
+    document.body.appendChild(clone);
+    touchRow.style.opacity = '0.3';
+  }, { passive: false });
+
+  list.addEventListener('touchmove', e => {
+    if (!touchRow || !clone) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    clone.style.top = (t.clientY - touchOffsetY) + 'px';
+
+    // find target row
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    const rows = getRows().filter(r => r !== touchRow);
+    for (const r of rows) {
+      const rect = r.getBoundingClientRect();
+      if (t.clientY >= rect.top && t.clientY <= rect.bottom) {
+        r.classList.add('drag-over');
+        const mid = rect.top + rect.height / 2;
+        if (t.clientY < mid) list.insertBefore(touchRow, r);
+        else list.insertBefore(touchRow, r.nextSibling);
+        break;
+      }
+    }
+  }, { passive: false });
+
+  const touchEnd = () => {
+    if (!touchRow) return;
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    touchRow.style.opacity = '';
+    if (clone) { clone.remove(); clone = null; }
+    reorderFromDom();
+    touchRow = null;
+  };
+  list.addEventListener('touchend', touchEnd);
+  list.addEventListener('touchcancel', touchEnd);
+}
+
+// ── RENDER ──
+function renderStudentList(gid) {
+  const g = groups.find(x => x.id === gid);
+  const c = COLORS[g.colorIdx];
+  const card = document.getElementById('card-' + gid);
+  if (!card) return;
+  const list = card.querySelector('.student-list');
+  list.innerHTML = '';
+
+  if (g.students.length === 0) {
+    list.innerHTML = '<p class="no-students">No students yet.</p>';
+    return;
+  }
+
+  g.students.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    row.dataset.sid = s.id;
+    row.draggable = true;
+    row.innerHTML = `
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="student-name">${escHtml(s.name)}</span>
+      <div class="counter">
+        <button class="counter-btn" style="border-color:${c.accent};color:${c.accent}"
+          ontouchstart="" onclick="changeMistakes('${gid}','${s.id}',-1)">−</button>
+        <span class="counter-num" style="color:${s.mistakes===0?'#aaa':c.accent};background:${s.mistakes>0?c.light:'transparent'}">${s.mistakes}</span>
+        <button class="counter-btn" style="border-color:${c.accent};color:${c.accent}"
+          ontouchstart="" onclick="changeMistakes('${gid}','${s.id}',1)">+</button>
+      </div>
+      <button class="btn-icon del-student" onclick="removeStudent('${gid}','${s.id}')" title="Remove">🗑️</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  grid.querySelectorAll('.card').forEach(el => el.remove());
+
+  if (groups.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  groups.forEach(g => {
+    const c = COLORS[g.colorIdx];
+    const total = g.students.reduce((a,s) => a + s.mistakes, 0);
+
+    const card = document.createElement('div');
+    card.className = 'card' + (isEditMode ? ' edit-mode' : '');
+    card.id = 'card-' + g.id;
+    card.style.background = c.bg;
+    card.style.borderTop = '4px solid ' + c.accent;
+
+    card.innerHTML = `
+      <div class="card-header-row">
+        <span class="group-name" style="color:${c.accent}"
+          onclick="${isEditMode ? `startRename('${g.id}', this)` : ''}"
+          title="${isEditMode ? 'Tap to rename' : ''}">${escHtml(g.name)}</span>
+        ${isEditMode ? `<button class="btn-icon" onclick="removeGroup('${g.id}')" title="Delete group">🗑️</button>` : ''}
+      </div>
+      <div class="card-stats">
+        <span class="badge stat-students" style="background:${c.light};color:${c.accent}">${g.students.length} students</span>
+        <span class="badge stat-mistakes" style="background:${c.light};color:${c.accent}">${total} total mistakes</span>
+      </div>
+      <div class="student-list"></div>
+      <div class="add-student-row">
+        <input type="text" id="si-${g.id}" placeholder="Student name…"
+          onkeydown="if(event.key==='Enter')addStudent('${g.id}')" />
+        <button class="btn-add-student" style="background:${c.accent}" onclick="addStudent('${g.id}')">+ Add</button>
+      </div>
+    `;
+
+    grid.appendChild(card);
+    renderStudentList(g.id);
+    initDrag(card, g.id);
+  });
+}
+
+function startRename(gid, el) {
+  if (!isEditMode) return;
+  const g = groups.find(x => x.id === gid);
+  const c = COLORS[g.colorIdx];
+  const input = document.createElement('input');
+  input.className = 'group-name-input';
+  input.value = g.name;
+  input.style.color = c.accent;
+  input.style.borderColor = c.accent;
+  el.replaceWith(input);
+  input.focus(); input.select();
+  const done = () => renameGroup(gid, input.value);
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+}
+
+document.getElementById('newGroupInput').addEventListener('keydown', e => { if (e.key === 'Enter') addGroup(); });
+
+// Close modal if clicking overlay background
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('show');
+  }
+});
+
+render();
+
+// ── PWA SETUP ──
+(function() {
+  // 1. Generate icon via canvas and set as apple-touch-icon
+  function makeIcon(size) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    // Background rounded rect
+    const r = size * 0.25;
+    ctx.fillStyle = '#1A1A2E';
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
+    ctx.quadraticCurveTo(size, 0, size, r);
+    ctx.lineTo(size, size-r);
+    ctx.quadraticCurveTo(size, size, size-r, size);
+    ctx.lineTo(r, size); ctx.quadraticCurveTo(0, size, 0, size-r);
+    ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath(); ctx.fill();
+    // Emoji
+    ctx.font = `${size * 0.55}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✏️', size/2, size/2 + size*0.04);
+    return c.toDataURL('image/png');
+  }
+
+  try {
+    const icon192 = makeIcon(192);
+    const icon512 = makeIcon(512);
+    // Set apple touch icon
+    document.getElementById('appleIcon').href = icon192;
+
+    // 2. Inject manifest via blob
+    const manifest = {
+      name: 'Mistake Tracker',
+      short_name: 'Mistakes',
+      description: 'Track student mistakes across groups',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#1A1A2E',
+      theme_color: '#1A1A2E',
+      orientation: 'portrait',
+      icons: [
+        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest'; link.href = url;
+    document.head.appendChild(link);
+  } catch(e) { console.warn('PWA icon setup failed', e); }
+
+  // 3. Register inline service worker for offline support
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'mistake-tracker-v1';
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(caches.keys().then(keys =>
+          Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+        ));
+        self.clients.claim();
+      });
+      self.addEventListener('fetch', e => {
+        e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./'))));
+      });
+    `;
+    try {
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    } catch(e) {}
+  }
+})();
+</script>
+</body>
+</html>
