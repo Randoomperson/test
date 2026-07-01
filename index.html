@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مدرسة قرآنية">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A2E">
+<meta name="description" content="Track student mistakes across your groups">
+<link rel="apple-touch-icon" id="appleIcon">
+<title>مدرسة قرآنية</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --dark: #1A1A2E; --gold: #E8C547; --radius: 14px; }
+
+body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F4F5F8; min-height: 100vh; padding-bottom: 80px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body.ar { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; }
+input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+
+/* ── HEADER ── */
+header { background: var(--dark); padding: 18px 20px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+.header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.logo { font-size: 30px; }
+.app-title { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: 21px; color: #fff; font-weight: 900; letter-spacing: -0.5px; }
+body.ar .app-title { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; font-size: 20px; letter-spacing: 0; }
+.app-subtitle { font-size: 12px; color: #7777aa; margin-top: 2px; }
+.header-right { display: flex; gap: 8px; align-items: center; margin-inline-start: auto; }
+
+/* Language toggle */
+.btn-lang {
+  border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.btn-lang:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.btn-lang:active { opacity: 0.7; }
+
+/* Edit mode toggle */
+.btn-mode {
+  border: 2px solid rgba(255,255,255,0.25); border-radius: 10px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 7px 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+body.ar .btn-mode { font-family: 'Cairo', sans-serif; }
+.btn-mode.active { background: var(--gold); border-color: var(--gold); color: var(--dark); }
+.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.2s; flex-shrink:0; }
+.btn-mode.active .mode-dot { background: var(--dark); }
+
+.header-controls { display: flex; gap: 8px; align-items: center; }
+.add-group-row { display: flex; gap: 8px; flex: 1; }
+.add-group-row input {
+  flex: 1; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 8px 13px; color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+body.ar .add-group-row input { font-family: 'Cairo', sans-serif; text-align: right; }
+.add-group-row input::placeholder { color: #555; }
+.add-group-row input:focus { border-color: var(--gold); }
+.btn-add-group {
+  background: var(--gold); color: var(--dark); border: none; border-radius: 10px;
+  padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+body.ar .btn-add-group { font-family: 'Cairo', sans-serif; }
+.btn-add-group:active { opacity: 0.8; }
+
+/* edit mode banner */
+.edit-banner {
+  display: none; background: #fff3cd; border-bottom: 2px solid var(--gold);
+  padding: 8px 20px; text-align: center; font-size: 13px; font-weight: 700; color: #7a5c00;
+}
+body.ar .edit-banner { font-family: 'Cairo', sans-serif; }
+.edit-banner.show { display: block; }
+
+/* add/remove group only in edit mode */
+.edit-only { display:none !important; }
+body.in-edit .edit-only { display:flex !important; }
+
+/* ── GRID ── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; padding: 18px 16px; max-width: 1100px; margin: 0 auto; }
+.empty-state { grid-column: 1/-1; text-align: center; padding: 70px 20px; color: #aaa; }
+.empty-state .icon { font-size: 52px; display: block; margin-bottom: 14px; }
+.empty-state p { font-size: 15px; }
+body.ar .empty-state p { font-family: 'Cairo', sans-serif; }
+
+/* ── CARD ── */
+.card { border-radius: var(--radius); padding: 18px; box-shadow: 0 2px 14px rgba(0,0,0,0.08); animation: slideIn 0.25s ease; transition: box-shadow 0.2s; }
+.card.edit-mode { box-shadow: 0 4px 20px rgba(0,0,0,0.14); }
+@keyframes slideIn { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
+
+.card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.group-name { flex:1; font-family:'Playfair Display',serif; font-size:18px; font-weight:700; border:none; background:transparent; padding:2px 0; outline:none; width:100%; cursor:default; }
+body.ar .group-name { font-family:'Cairo',sans-serif; font-size:17px; }
+.group-name.editable { cursor:pointer; }
+.group-name-input { flex:1; font-family:'Playfair Display',serif; font-size:17px; font-weight:700; border:1.5px solid #ccc; border-radius:7px; padding:3px 8px; outline:none; background:#fff; width:100%; }
+body.ar .group-name-input { font-family:'Cairo',sans-serif; text-align:right; }
+.btn-icon { background:none; border:none; cursor:pointer; font-size:15px; color:#ccc; border-radius:6px; padding:3px 6px; transition:all 0.15s; line-height:1; }
+.btn-icon:hover, .btn-icon:active { color:#e53935; background:rgba(229,57,53,0.08); }
+
+.card-stats { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.2px; }
+body.ar .badge { font-family:'Cairo',sans-serif; letter-spacing:0; }
+
+/* ── STUDENT LIST ── */
+.student-list { margin-bottom:12px; }
+.no-students { text-align:center; color:#bbb; font-size:13px; padding:10px 0; }
+body.ar .no-students { font-family:'Cairo',sans-serif; }
+
+.student-row { display:flex; flex-direction:column; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.06); gap:8px; }
+.student-top-row { display:flex; align-items:center; gap:8px; width:100%; }
+.counters-group { display:flex; align-items:center; gap:14px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-start; }
+.drag-handle { cursor:grab; font-size:18px; color:#ccc; padding:0 2px; display:none; user-select:none; touch-action:none; flex-shrink:0; }
+.edit-mode .drag-handle { display:block; }
+.student-row.dragging { opacity:0.45; }
+.student-row.drag-over { border-top:2px solid #1565C0; }
+
+/* student name — tap to edit in edit mode */
+.student-name { flex:1 1 auto; min-width:0; font-size:15px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#222; cursor:default; border:none; background:transparent; outline:none; padding:0; font-family:inherit; }
+body.ar .student-name { font-family:'Cairo',sans-serif; text-align:right; }
+.edit-mode .student-name { cursor:pointer; border-bottom:1.5px dashed #ccc; }
+.student-name-input { flex:1; font-size:15px; font-weight:500; color:#222; border:1.5px solid #aaa; border-radius:6px; padding:2px 6px; outline:none; background:#fff; font-family:inherit; min-width:0; }
+body.ar .student-name-input { font-family:'Cairo',sans-serif; text-align:right; direction:rtl; }
+
+/* ── COUNTER ── */
+.counter { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.counter-btn {
+  width:50px; height:50px; border-radius:12px; border:2px solid; background:white;
+  font-size:24px; font-weight:700; cursor:pointer; display:none; align-items:center; justify-content:center;
+  line-height:1; transition:opacity 0.1s, transform 0.1s; font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent; user-select:none;
+}
+.edit-mode .counter-btn { display:flex; }
+.counter-btn:active { opacity:0.6; transform:scale(0.9); }
+.counter-num { min-width:40px; text-align:center; font-weight:800; font-size:18px; border-radius:7px; padding:2px 4px; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+
+/* ── EDIT-ONLY UI ── */
+.add-student-row { display:none; gap:8px; margin-top:4px; }
+.edit-mode .add-student-row { display:flex; }
+.add-student-row input {
+  flex:1; border:1.5px solid #E0E0E0; border-radius:9px; padding:7px 11px;
+  font-family:'DM Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.2s; background:#fff;
+}
+body.ar .add-student-row input { font-family:'Cairo',sans-serif; text-align:right; direction:rtl; }
+.add-student-row input:focus { border-color:#888; }
+.btn-add-student { border:none; border-radius:9px; padding:7px 13px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:13px; color:#fff; cursor:pointer; white-space:nowrap; transition:filter 0.15s; -webkit-tap-highlight-color:transparent; }
+body.ar .btn-add-student { font-family:'Cairo',sans-serif; }
+.btn-add-student:active { filter:brightness(0.85); }
+
+.del-student {
+  display:none; width:32px; height:32px; flex-shrink:0; margin-inline-start:auto;
+  align-items:center; justify-content:center; font-size:16px; border-radius:8px;
+}
+.edit-mode .del-student { display:flex; }
+
+/* ── SAVE BUTTON (floating) ── */
+.fab-save {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) scale(0);
+  background: #2e7d32; color: #fff; border: none; border-radius: 50px;
+  padding: 14px 32px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 16px;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 200;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), background 0.2s;
+  white-space: nowrap;
+}
+body.ar .fab-save { font-family: 'Cairo', sans-serif; }
+.fab-save.show { transform: translateX(-50%) scale(1); }
+.fab-save:active { background: #1b5e20; }
+
+/* ── CONFIRMATION MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 500; align-items: center; justify-content: center; padding: 16px;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 18px; max-width: 480px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: popIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  max-height: 85vh; display: flex; flex-direction: column;
+}
+@keyframes popIn { from { opacity:0; transform:scale(0.85);} to { opacity:1; transform:scale(1);} }
+.modal-header { padding: 20px 22px 14px; border-bottom: 1px solid #f0f0f0; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: #1A1A2E; }
+body.ar .modal-title { font-family: 'Cairo', sans-serif; }
+.modal-subtitle { font-size: 13px; color: #888; margin-top: 3px; }
+body.ar .modal-subtitle { font-family: 'Cairo', sans-serif; }
+.modal-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+.change-section { margin-bottom: 14px; }
+.change-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 8px; }
+body.ar .change-section-title { font-family: 'Cairo', sans-serif; letter-spacing: 0; text-transform: none; }
+.change-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; font-size: 14px; }
+body.ar .change-item { font-family: 'Cairo', sans-serif; flex-direction: row-reverse; text-align: right; }
+.change-item.added { background: #E8F5E9; color: #2e7d32; }
+.change-item.removed { background: #FFEBEE; color: #c62828; }
+.change-item.modified { background: #E3F2FD; color: #1565C0; }
+.change-item.reordered { background: #FFF3E0; color: #E65100; }
+.change-icon { font-size: 16px; flex-shrink: 0; }
+.no-changes { text-align: center; color: #bbb; padding: 20px 0; font-size: 14px; }
+body.ar .no-changes { font-family: 'Cairo', sans-serif; }
+.modal-footer { padding: 14px 22px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 10px; justify-content: flex-end; }
+body[dir="rtl"] .modal-footer { justify-content: flex-start; }
+.btn-discard { background: #f5f5f5; color: #555; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+body.ar .btn-discard { font-family: 'Cairo', sans-serif; }
+.btn-discard:active { background: #e0e0e0; }
+.btn-confirm { background: #2e7d32; color: #fff; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+body.ar .btn-confirm { font-family: 'Cairo', sans-serif; }
+.btn-confirm:active { background: #1b5e20; }
+
+/* ── BACKUP BAR ── */
+.backup-bar {
+  background: #1e1e35; border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 8px 16px; display: flex; gap: 8px; align-items: center; justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-backup {
+  border: 1.5px solid rgba(255,255,255,0.2); border-radius: 9px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px;
+  padding: 6px 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  display: flex; align-items: center; gap: 5px;
+}
+body.ar .btn-backup { font-family: 'Cairo', sans-serif; }
+.btn-backup:hover { border-color: var(--gold); color: var(--gold); }
+.btn-backup:active { opacity: 0.7; }
+.btn-backup.import { border-color: rgba(100,200,100,0.4); color: #7cb87c; }
+.btn-backup.import:hover { border-color: #7cb87c; color: #aee8ae; }
+.backup-label { color: #555; font-size: 11px; font-family: 'DM Sans', sans-serif; }
+body.ar .backup-label { font-family: 'Cairo', sans-serif; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #222; color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-family: 'DM Sans', sans-serif; opacity: 0;
+  transition: all 0.3s; z-index: 999; white-space: nowrap; pointer-events: none;
+}
+body.ar .toast { font-family: 'Cairo', sans-serif; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; padding: 12px; }
+  header { padding: 14px 14px 11px; }
+  .app-title { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span class="logo">✏️</span>
+    <div style="flex:1">
+      <div class="app-title" id="appTitle">مدرسة قرآنية</div>
+      <div class="app-subtitle" id="appSubtitle">Track student errors across your groups</div>
+    </div>
+    <div class="header-right">
+      <button class="btn-lang" id="langBtn" onclick="toggleLang()">عربي</button>
+      <button class="btn-mode" id="modeBtn" onclick="toggleMode()">
+        <span class="mode-dot"></span> <span id="modeBtnText">Edit</span>
+      </button>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="add-group-row edit-only" id="addGroupRow">
+      <input type="text" id="newGroupInput" placeholder="New group name…" />
+      <button class="btn-add-group" id="btnAddGroup" onclick="addGroup()">+ Group</button>
+    </div>
+  </div>
+</header>
+
+<div class="backup-bar">
+  <span class="backup-label" id="backupLabel">💾 Data backup:</span>
+  <button class="btn-backup" onclick="exportData()">⬇️ <span id="btnExportText">Export</span></button>
+  <button class="btn-backup import" onclick="document.getElementById('importFile').click()">⬆️ <span id="btnImportText">Import</span></button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="edit-banner" id="editBanner">✏️ Edit Mode — drag to reorder, tap names to rename, then tap Save</div>
+
+<div class="grid" id="grid">
+  <div class="empty-state" id="emptyState">
+    <span class="icon">📋</span>
+    <p id="emptyText">No groups yet. Switch to Edit Mode to create a group!</p>
+  </div>
+</div>
+
+<button class="fab-save" id="fabSave" onclick="openConfirm()">💾 <span id="fabText">Save Changes</span></button>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Review Changes</div>
+      <div class="modal-subtitle" id="modalSubtitle">Here's what will be saved</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-discard" id="btnDiscard" onclick="discardChanges()">Discard</button>
+      <button class="btn-confirm" id="btnConfirm" onclick="confirmSave()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal (used for both group and student deletion) -->
+<div class="modal-overlay" id="deleteConfirmOverlay">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" id="deleteConfirmTitle">Confirm Delete</div>
+    </div>
+    <div class="modal-body">
+      <p id="deleteConfirmMessage" style="font-size:14px;color:#555;line-height:1.5;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-discard" id="deleteConfirmCancelBtn" onclick="closeDeleteConfirm()">Cancel</button>
+      <button class="btn-confirm" id="deleteConfirmOkBtn" style="background:#c62828" onclick="executeDeleteConfirm()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  { bg:'#FFF3E0', accent:'#F57C00', light:'#FFE0B2' },
+  { bg:'#E8F5E9', accent:'#388E3C', light:'#C8E6C9' },
+  { bg:'#E3F2FD', accent:'#1565C0', light:'#BBDEFB' },
+  { bg:'#FCE4EC', accent:'#C62828', light:'#FFCDD2' },
+  { bg:'#F3E5F5', accent:'#6A1B9A', light:'#E1BEE7' },
+  { bg:'#E0F7FA', accent:'#00695C', light:'#B2EBF2' },
+];
+
+// ── TRANSLATIONS ──
+const T = {
+  en: {
+    appTitle: 'مدرسة قرآنية',
+    appSubtitle: 'Track student errors across your groups',
+    edit: 'Edit',
+    editing: 'Editing…',
+    editBanner: '✏️ Edit Mode — drag to reorder, tap names to rename, then tap Save',
+    addGroupPlaceholder: 'New group name…',
+    addGroup: '+ Group',
+    fabSave: 'Save Changes',
+    modalTitle: 'Review Changes',
+    noChanges: '🟰 No changes were made.',
+    nothingToSave: 'Nothing to save',
+    changesCount: (n) => `${n} change${n>1?'s':''} to save`,
+    discard: 'Discard',
+    confirm: 'Save Changes',
+    students: (n) => `${n} student${n!==1?'s':''}`,
+    mistakes: (n) => `${n} mistake${n!==1?'s':''}`,
+    noStudents: 'No students yet.',
+    addStudentPlaceholder: 'Student name…',
+    addStudent: '+ Add',
+    emptyState: 'No groups yet. Switch to Edit Mode to create a group!',
+    sectionGroups: 'Groups',
+    sectionStudents: 'Students',
+    sectionOrder: 'Order Changes',
+    sectionMistakes: 'Mistake Counts',
+    groupAdded: (n) => `Group added: "${n}"`,
+    groupRemoved: (n) => `Group removed: "${n}"`,
+    groupRenamed: (a,b) => `Group renamed: "${a}" → "${b}"`,
+    studentAdded: (s,g) => `"${s}" added to ${g}`,
+    studentRemoved: (s,g) => `"${s}" removed from ${g}`,
+    studentRenamed: (a,b,g) => `"${a}" renamed to "${b}" in ${g}`,
+    orderChanged: (g) => `Student order changed in "${g}"`,
+    mistakeChanged: (s,g,a,b,d) => `${s} (${g}): ${a} → ${b} (${d>0?'+':''}${d})`,
+    mistake2Changed: (s,g,a,b,d) => `${s} (${g}) [2]: ${a} → ${b} (${d>0?'+':''}${d})`,
+    removeGroupConfirm: (n) => `Remove the group "${n}" and all its students? This cannot be undone.`,
+    removeStudentConfirm: (n) => `Remove "${n}"? This cannot be undone.`,
+    deleteConfirmTitle: 'Confirm Delete',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    langBtn: 'عربي',
+    backupLabel: '💾 Data backup:',
+    btnExport: 'Export',
+    btnImport: 'Import',
+    exportSuccess: '✅ Backup saved!',
+    importSuccess: (n) => `✅ Imported ${n} group${n!==1?'s':''}`,
+    importError: '❌ Invalid backup file',
+  },
+  ar: {
+    appTitle: 'مدرسة قرآنية',
+    appSubtitle: 'تتبع أخطاء الطلاب عبر مجموعاتك',
+    edit: 'تعديل',
+    editing: 'جارٍ التعديل…',
+    editBanner: '✏️ وضع التعديل — اسحب لإعادة الترتيب، انقر على الأسماء لتغييرها، ثم احفظ',
+    addGroupPlaceholder: 'اسم المجموعة الجديدة…',
+    addGroup: '+ مجموعة',
+    fabSave: 'حفظ التغييرات',
+    modalTitle: 'مراجعة التغييرات',
+    noChanges: '🟰 لم يتم إجراء أي تغييرات.',
+    nothingToSave: 'لا يوجد ما يُحفظ',
+    changesCount: (n) => `${n} تغيير للحفظ`,
+    discard: 'تجاهل',
+    confirm: 'حفظ التغييرات',
+    students: (n) => `${n} طالب`,
+    mistakes: (n) => `${n} خطأ`,
+    noStudents: 'لا يوجد طلاب بعد.',
+    addStudentPlaceholder: 'اسم الطالب…',
+    addStudent: '+ إضافة',
+    emptyState: 'لا توجد مجموعات بعد. انتقل إلى وضع التعديل لإنشاء مجموعة!',
+    sectionGroups: 'المجموعات',
+    sectionStudents: 'الطلاب',
+    sectionOrder: 'تغييرات الترتيب',
+    sectionMistakes: 'عدد الأخطاء',
+    groupAdded: (n) => `تمت إضافة مجموعة: "${n}"`,
+    groupRemoved: (n) => `تمت إزالة مجموعة: "${n}"`,
+    groupRenamed: (a,b) => `تمت إعادة تسمية: "${a}" ← "${b}"`,
+    studentAdded: (s,g) => `تمت إضافة "${s}" إلى ${g}`,
+    studentRemoved: (s,g) => `تمت إزالة "${s}" من ${g}`,
+    studentRenamed: (a,b,g) => `تمت إعادة تسمية "${a}" إلى "${b}" في ${g}`,
+    orderChanged: (g) => `تم تغيير ترتيب الطلاب في "${g}"`,
+    mistakeChanged: (s,g,a,b,d) => `${s} (${g}): ${a} ← ${b} (${d>0?'+':''}${d})`,
+    mistake2Changed: (s,g,a,b,d) => `${s} (${g}) [٢]: ${a} ← ${b} (${d>0?'+':''}${d})`,
+    removeGroupConfirm: (n) => `هل تريد حذف مجموعة "${n}" وجميع طلابها؟ لا يمكن التراجع عن هذا الإجراء.`,
+    removeStudentConfirm: (n) => `هل تريد حذف "${n}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+    deleteConfirmTitle: 'تأكيد الحذف',
+    cancel: 'إلغاء',
+    delete: 'حذف',
+    langBtn: 'English',
+    backupLabel: '💾 نسخ احتياطي:',
+    btnExport: 'تصدير',
+    btnImport: 'استيراد',
+    exportSuccess: '✅ تم حفظ النسخة الاحتياطية!',
+    importSuccess: (n) => `✅ تم استيراد ${n} مجموعة`,
+    importError: '❌ ملف غير صالح',
+  }
+};
+
+// ── STATE ──
+let groups = JSON.parse(localStorage.getItem('mistakeTrackerGroups') || '[]');
+// Migration: ensure every student has the second, independent counter
+groups.forEach(g => g.students.forEach(s => { if (typeof s.mistakes2 !== 'number') s.mistakes2 = 0; }));
+let colorCounter = groups.length;
+let isEditMode = false;
+let snapshot = null;
+let lang = localStorage.getItem('mtLang') || 'en';
+
+function t(key, ...args) {
+  const val = T[lang][key];
+  return typeof val === 'function' ? val(...args) : val;
+}
+
+function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
+function uid() { return Math.random().toString(36).slice(2); }
+function save() { localStorage.setItem('mistakeTrackerGroups', JSON.stringify(groups)); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── EXPORT / IMPORT ──
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function exportData() {
+  const data = { version: 1, exported: new Date().toISOString(), groups };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `madrasa-quraniya-backup.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(t('exportSuccess'));
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.groups || !Array.isArray(data.groups)) throw new Error('invalid');
+      groups = data.groups;
+      groups.forEach(g => g.students.forEach(s => { if (typeof s.mistakes2 !== 'number') s.mistakes2 = 0; }));
+      colorCounter = groups.length;
+      save();
+      render();
+      showToast(t('importSuccess', groups.length));
+    } catch {
+      showToast(t('importError'));
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ── LANGUAGE ──
+function toggleLang() {
+  lang = lang === 'en' ? 'ar' : 'en';
+  localStorage.setItem('mtLang', lang);
+  applyLang();
+  render();
+}
+
+function applyLang() {
+  const isAr = lang === 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+  document.body.classList.toggle('ar', isAr);
+
+  document.getElementById('appTitle').textContent = t('appTitle');
+  document.getElementById('appSubtitle').textContent = t('appSubtitle');
+  document.getElementById('langBtn').textContent = t('langBtn');
+  document.getElementById('emptyText').textContent = t('emptyState');
+  document.getElementById('editBanner').textContent = t('editBanner');
+  document.getElementById('newGroupInput').placeholder = t('addGroupPlaceholder');
+  document.getElementById('btnAddGroup').textContent = t('addGroup');
+  document.getElementById('fabText').textContent = t('fabSave');
+  document.getElementById('modalTitle').textContent = t('modalTitle');
+  document.getElementById('btnDiscard').textContent = t('discard');
+  document.getElementById('btnConfirm').textContent = t('confirm');
+
+  document.getElementById('backupLabel').textContent = t('backupLabel');
+  document.getElementById('btnExportText').textContent = t('btnExport');
+  document.getElementById('btnImportText').textContent = t('btnImport');
+  document.getElementById('deleteConfirmTitle').textContent = t('deleteConfirmTitle');
+  document.getElementById('deleteConfirmCancelBtn').textContent = t('cancel');
+  document.getElementById('deleteConfirmOkBtn').textContent = t('delete');
+  if (isEditMode) {
+    document.getElementById('modeBtnText').textContent = t('editing');
+  } else {
+    document.getElementById('modeBtnText').textContent = t('edit');
+  }
+}
+
+// ── MODE ──
+function toggleMode() {
+  if (isEditMode) openConfirm();
+  else enterEditMode();
+}
+
+function enterEditMode() {
+  isEditMode = true;
+  snapshot = deepClone(groups);
+  document.body.classList.add('in-edit');
+  document.getElementById('modeBtn').classList.add('active');
+  document.getElementById('modeBtnText').textContent = t('editing');
+  document.getElementById('editBanner').classList.add('show');
+  document.getElementById('fabSave').classList.add('show');
+  document.getElementById('newGroupInput').value = '';
+  render();
+}
+
+function exitEditMode() {
+  isEditMode = false;
+  snapshot = null;
+  document.body.classList.remove('in-edit');
+  document.getElementById('modeBtn').classList.remove('active');
+  document.getElementById('modeBtnText').textContent = t('edit');
+  document.getElementById('editBanner').classList.remove('show');
+  document.getElementById('fabSave').classList.remove('show');
+  render();
+}
+
+// ── CONFIRMATION ──
+function openConfirm() {
+  const changes = computeChanges(snapshot, groups);
+  const body = document.getElementById('modalBody');
+  const subtitle = document.getElementById('modalSubtitle');
+
+  if (changes.length === 0) {
+    body.innerHTML = `<div class="no-changes">${t('noChanges')}</div>`;
+    subtitle.textContent = t('nothingToSave');
+  } else {
+    subtitle.textContent = t('changesCount', changes.length);
+    const cats = { group: [], student: [], order: [], mistakes: [] };
+    changes.forEach(c => cats[c.cat].push(c));
+    let html = '';
+    const sections = [
+      ['group', t('sectionGroups')],
+      ['student', t('sectionStudents')],
+      ['order', t('sectionOrder')],
+      ['mistakes', t('sectionMistakes')],
+    ];
+    sections.forEach(([key, label]) => {
+      if (!cats[key].length) return;
+      html += `<div class="change-section"><div class="change-section-title">${label}</div>`;
+      cats[key].forEach(c => { html += `<div class="change-item ${c.type}"><span class="change-icon">${c.icon}</span><span>${escHtml(c.text)}</span></div>`; });
+      html += `</div>`;
+    });
+    body.innerHTML = html;
+  }
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function computeChanges(before, after) {
+  if (!before) return [];
+  const changes = [];
+  const beforeIds = new Set(before.map(g => g.id));
+  const afterIds  = new Set(after.map(g => g.id));
+
+  after.forEach(g => {
+    if (!beforeIds.has(g.id)) changes.push({ cat:'group', type:'added', icon:'➕', text: t('groupAdded', g.name) });
+  });
+  before.forEach(g => {
+    if (!afterIds.has(g.id)) changes.push({ cat:'group', type:'removed', icon:'🗑️', text: t('groupRemoved', g.name) });
+  });
+  after.forEach(g => {
+    const bg = before.find(x => x.id === g.id);
+    if (bg && bg.name !== g.name) changes.push({ cat:'group', type:'modified', icon:'✏️', text: t('groupRenamed', bg.name, g.name) });
+  });
+
+  after.forEach(g => {
+    const bg = before.find(x => x.id === g.id);
+    if (!bg) return;
+    const bIds = new Set(bg.students.map(s => s.id));
+    const aIds = new Set(g.students.map(s => s.id));
+
+    g.students.forEach(s => {
+      if (!bIds.has(s.id)) changes.push({ cat:'student', type:'added', icon:'➕', text: t('studentAdded', s.name, g.name) });
+    });
+    bg.students.forEach(s => {
+      if (!aIds.has(s.id)) changes.push({ cat:'student', type:'removed', icon:'🗑️', text: t('studentRemoved', s.name, g.name) });
+    });
+    // renamed
+    g.students.forEach(s => {
+      const bs = bg.students.find(x => x.id === s.id);
+      if (bs && bs.name !== s.name) changes.push({ cat:'student', type:'modified', icon:'✏️', text: t('studentRenamed', bs.name, s.name, g.name) });
+    });
+
+    const commonBefore = bg.students.filter(s => aIds.has(s.id)).map(s => s.id);
+    const commonAfter  = g.students.filter(s => bIds.has(s.id)).map(s => s.id);
+    if (JSON.stringify(commonBefore) !== JSON.stringify(commonAfter))
+      changes.push({ cat:'order', type:'reordered', icon:'↕️', text: t('orderChanged', g.name) });
+
+    g.students.forEach(s => {
+      const bs = bg.students.find(x => x.id === s.id);
+      if (bs && bs.mistakes !== s.mistakes) {
+        const delta = s.mistakes - bs.mistakes;
+        changes.push({ cat:'mistakes', type:'modified', icon: delta>0?'📈':'📉',
+          text: t('mistakeChanged', s.name, g.name, bs.mistakes, s.mistakes, delta) });
+      }
+      if (bs && (bs.mistakes2||0) !== (s.mistakes2||0)) {
+        const delta2 = (s.mistakes2||0) - (bs.mistakes2||0);
+        changes.push({ cat:'mistakes', type:'modified', icon: delta2>0?'📈':'📉',
+          text: t('mistake2Changed', s.name, g.name, bs.mistakes2||0, s.mistakes2||0, delta2) });
+      }
+    });
+  });
+  return changes;
+}
+
+function confirmSave() {
+  save();
+  document.getElementById('modalOverlay').classList.remove('show');
+  exitEditMode();
+}
+
+function discardChanges() {
+  groups = deepClone(snapshot);
+  document.getElementById('modalOverlay').classList.remove('show');
+  exitEditMode();
+}
+
+// ── DELETE CONFIRMATION (shared by group & student deletion) ──
+let deleteConfirmAction = null;
+
+function openDeleteConfirm(message, onConfirm) {
+  document.getElementById('deleteConfirmMessage').textContent = message;
+  deleteConfirmAction = onConfirm;
+  document.getElementById('deleteConfirmOverlay').classList.add('show');
+}
+
+function closeDeleteConfirm() {
+  document.getElementById('deleteConfirmOverlay').classList.remove('show');
+  deleteConfirmAction = null;
+}
+
+function executeDeleteConfirm() {
+  const action = deleteConfirmAction;
+  closeDeleteConfirm();
+  if (action) action();
+}
+
+document.getElementById('deleteConfirmOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('deleteConfirmOverlay')) closeDeleteConfirm();
+});
+
+// ── GROUP ACTIONS ──
+function addGroup() {
+  const input = document.getElementById('newGroupInput');
+  const name = input.value.trim();
+  if (!name) return;
+  groups.push({ id: uid(), name, colorIdx: colorCounter++ % COLORS.length, students: [] });
+  input.value = '';
+  render();
+}
+
+function removeGroup(gid) {
+  const g = groups.find(x => x.id === gid);
+  if (!g) return;
+  openDeleteConfirm(t('removeGroupConfirm', g.name), () => {
+    groups = groups.filter(x => x.id !== gid);
+    render();
+  });
+}
+
+function renameGroup(gid, name) {
+  const g = groups.find(x => x.id === gid);
+  if (g && name.trim()) g.name = name.trim();
+  render();
+}
+
+// ── STUDENT ACTIONS ──
+function addStudent(gid) {
+  const input = document.getElementById('si-' + gid);
+  const name = input.value.trim();
+  if (!name) return;
+  const g = groups.find(x => x.id === gid);
+  g.students.push({ id: uid(), name, mistakes: 0, mistakes2: 0 });
+  input.value = '';
+  renderStudentList(gid);
+  updateStats(gid);
+}
+
+function removeStudent(gid, sid) {
+  const g = groups.find(x => x.id === gid);
+  const s = g && g.students.find(x => x.id === sid);
+  if (!s) return;
+  openDeleteConfirm(t('removeStudentConfirm', s.name), () => {
+    g.students = g.students.filter(x => x.id !== sid);
+    renderStudentList(gid);
+    updateStats(gid);
+  });
+}
+
+function renameStudent(gid, sid, newName) {
+  const g = groups.find(x => x.id === gid);
+  const s = g.students.find(x => x.id === sid);
+  if (s && newName.trim()) s.name = newName.trim();
+}
+
+function startRenameStudent(gid, sid, nameEl) {
+  if (!isEditMode) return;
+  const g = groups.find(x => x.id === gid);
+  const s = g.students.find(x => x.id === sid);
+  const input = document.createElement('input');
+  input.className = 'student-name-input';
+  input.value = s.name;
+  if (lang === 'ar') { input.dir = 'rtl'; }
+  nameEl.replaceWith(input);
+  input.focus(); input.select();
+  const done = () => {
+    renameStudent(gid, sid, input.value);
+    renderStudentList(gid);
+  };
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+}
+
+function changeMistakes(gid, sid, delta, key) {
+  key = key || 'mistakes';
+  const g = groups.find(x => x.id === gid);
+  const s = g.students.find(x => x.id === sid);
+  s[key] = s[key] + delta;
+  const card = document.getElementById('card-' + gid);
+  const row = card.querySelector(`[data-sid="${sid}"]`);
+  if (row) {
+    const c = COLORS[g.colorIdx];
+    const num = row.querySelector(`.counter-num[data-key="${key}"]`);
+    if (num) {
+      num.textContent = s[key];
+      num.style.color = s[key] === 0 ? '#aaa' : c.accent;
+      num.style.background = s[key] !== 0 ? c.light : 'transparent';
+    }
+  }
+  // "mistakes" drives the total shown in card stats; mistakes2 does not affect that stat
+  if (key === 'mistakes') updateStats(gid);
+  if (!isEditMode) save();
+}
+
+function updateStats(gid) {
+  const g = groups.find(x => x.id === gid);
+  const card = document.getElementById('card-' + gid);
+  if (!card) return;
+  const total = g.students.reduce((a, s) => a + s.mistakes, 0);
+  card.querySelector('.stat-students').textContent = t('students', g.students.length);
+  card.querySelector('.stat-mistakes').textContent = t('mistakes', total);
+}
+
+// ── DRAG & DROP ──
+let dragSrc = null;
+
+function initDrag(card, gid) {
+  const list = card.querySelector('.student-list');
+  function getRows() { return [...list.querySelectorAll('.student-row')]; }
+  function reorderFromDom() {
+    const g = groups.find(x => x.id === gid);
+    const newOrder = getRows().map(r => r.dataset.sid);
+    g.students = newOrder.map(id => g.students.find(s => s.id === id)).filter(Boolean);
+  }
+
+  list.addEventListener('dragstart', e => {
+    if (!isEditMode) { e.preventDefault(); return; }
+    const row = e.target.closest('.student-row');
+    if (!row) return;
+    dragSrc = row;
+    setTimeout(() => row.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  list.addEventListener('dragend', e => {
+    const row = e.target.closest('.student-row');
+    if (row) row.classList.remove('dragging');
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    if (isEditMode) reorderFromDom();
+  });
+  list.addEventListener('dragover', e => {
+    if (!isEditMode) return;
+    e.preventDefault();
+    const row = e.target.closest('.student-row');
+    if (!row || row === dragSrc) return;
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    row.classList.add('drag-over');
+    const rect = row.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) list.insertBefore(dragSrc, row);
+    else list.insertBefore(dragSrc, row.nextSibling);
+  });
+  list.addEventListener('drop', e => { e.preventDefault(); });
+
+  // Touch
+  let touchRow = null, clone = null, touchOffsetY = 0;
+  list.addEventListener('touchstart', e => {
+    const handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    touchRow = handle.closest('.student-row');
+    if (!touchRow) return;
+    e.preventDefault();
+    const t2 = e.touches[0];
+    const rect = touchRow.getBoundingClientRect();
+    touchOffsetY = t2.clientY - rect.top;
+    clone = touchRow.cloneNode(true);
+    clone.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.85;z-index:999;pointer-events:none;background:white;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.2);`;
+    document.body.appendChild(clone);
+    touchRow.style.opacity = '0.3';
+  }, { passive: false });
+
+  list.addEventListener('touchmove', e => {
+    if (!touchRow || !clone) return;
+    e.preventDefault();
+    const t2 = e.touches[0];
+    clone.style.top = (t2.clientY - touchOffsetY) + 'px';
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    for (const r of getRows().filter(r => r !== touchRow)) {
+      const rect = r.getBoundingClientRect();
+      if (t2.clientY >= rect.top && t2.clientY <= rect.bottom) {
+        r.classList.add('drag-over');
+        if (t2.clientY < rect.top + rect.height / 2) list.insertBefore(touchRow, r);
+        else list.insertBefore(touchRow, r.nextSibling);
+        break;
+      }
+    }
+  }, { passive: false });
+
+  const touchEnd = () => {
+    if (!touchRow) return;
+    list.querySelectorAll('.student-row').forEach(r => r.classList.remove('drag-over'));
+    touchRow.style.opacity = '';
+    if (clone) { clone.remove(); clone = null; }
+    reorderFromDom();
+    touchRow = null;
+  };
+  list.addEventListener('touchend', touchEnd);
+  list.addEventListener('touchcancel', touchEnd);
+}
+
+function buildCounterHTML(gid, s, key, c) {
+  const val = s[key];
+  const numColor = val === 0 ? '#aaa' : c.accent;
+  const numBg = val !== 0 ? c.light : 'transparent';
+  return `
+    <div class="counter">
+      <button class="counter-btn" style="border-color:${c.accent};color:${c.accent}"
+        ontouchstart="" onclick="changeMistakes('${gid}','${s.id}',-1,'${key}')">−</button>
+      <span class="counter-num" data-key="${key}" style="color:${numColor};background:${numBg}">${val}</span>
+      <button class="counter-btn" style="border-color:${c.accent};color:${c.accent}"
+        ontouchstart="" onclick="changeMistakes('${gid}','${s.id}',1,'${key}')">+</button>
+    </div>`;
+}
+
+// ── RENDER ──
+function renderStudentList(gid) {
+  const g = groups.find(x => x.id === gid);
+  const c = COLORS[g.colorIdx];
+  const card = document.getElementById('card-' + gid);
+  if (!card) return;
+  const list = card.querySelector('.student-list');
+  list.innerHTML = '';
+
+  if (g.students.length === 0) {
+    list.innerHTML = `<p class="no-students">${t('noStudents')}</p>`;
+    return;
+  }
+
+  g.students.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    row.dataset.sid = s.id;
+    row.draggable = isEditMode;
+
+    const topRow = document.createElement('div');
+    topRow.className = 'student-top-row';
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.title = 'Drag';
+    handle.textContent = '⠿';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'student-name' + (isEditMode ? ' editable' : '');
+    nameEl.textContent = s.name;
+    if (isEditMode) {
+      nameEl.title = lang === 'ar' ? 'انقر لتعديل الاسم' : 'Tap to rename';
+      nameEl.onclick = () => startRenameStudent(gid, s.id, nameEl);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-icon del-student';
+    delBtn.title = 'Remove';
+    delBtn.textContent = '🗑️';
+    delBtn.onclick = () => removeStudent(gid, s.id);
+
+    topRow.appendChild(handle);
+    topRow.appendChild(nameEl);
+    topRow.appendChild(delBtn);
+
+    const counterGroup = document.createElement('div');
+    counterGroup.className = 'counters-group';
+    counterGroup.innerHTML = buildCounterHTML(gid, s, 'mistakes', c) + buildCounterHTML(gid, s, 'mistakes2', c);
+
+    row.appendChild(topRow);
+    row.appendChild(counterGroup);
+    list.appendChild(row);
+  });
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  grid.querySelectorAll('.card').forEach(el => el.remove());
+
+  if (groups.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  groups.forEach(g => {
+    const c = COLORS[g.colorIdx];
+    const total = g.students.reduce((a,s) => a + s.mistakes, 0);
+
+    const card = document.createElement('div');
+    card.className = 'card' + (isEditMode ? ' edit-mode' : '');
+    card.id = 'card-' + g.id;
+    card.style.background = c.bg;
+    card.style.borderTop = '4px solid ' + c.accent;
+
+    card.innerHTML = `
+      <div class="card-header-row">
+        <span class="group-name${isEditMode?' editable':''}" style="color:${c.accent}"
+          ${isEditMode ? `onclick="startRenameGroup('${g.id}', this)" title="${lang==='ar'?'انقر لتعديل الاسم':'Tap to rename'}"` : ''}
+        >${escHtml(g.name)}</span>
+        ${isEditMode ? `<button class="btn-icon" onclick="removeGroup('${g.id}')" title="Delete">🗑️</button>` : ''}
+      </div>
+      <div class="card-stats">
+        <span class="badge stat-students" style="background:${c.light};color:${c.accent}">${t('students', g.students.length)}</span>
+        <span class="badge stat-mistakes" style="background:${c.light};color:${c.accent}">${t('mistakes', total)}</span>
+      </div>
+      <div class="student-list"></div>
+      <div class="add-student-row">
+        <input type="text" id="si-${g.id}" placeholder="${escHtml(t('addStudentPlaceholder'))}"
+          onkeydown="if(event.key==='Enter')addStudent('${g.id}')" />
+        <button class="btn-add-student" style="background:${c.accent}" onclick="addStudent('${g.id}')">${t('addStudent')}</button>
+      </div>
+    `;
+
+    grid.appendChild(card);
+    renderStudentList(g.id);
+    initDrag(card, g.id);
+  });
+}
+
+function startRenameGroup(gid, el) {
+  if (!isEditMode) return;
+  const g = groups.find(x => x.id === gid);
+  const c = COLORS[g.colorIdx];
+  const input = document.createElement('input');
+  input.className = 'group-name-input';
+  input.value = g.name;
+  input.style.color = c.accent;
+  input.style.borderColor = c.accent;
+  if (lang === 'ar') input.dir = 'rtl';
+  el.replaceWith(input);
+  input.focus(); input.select();
+  const done = () => renameGroup(gid, input.value);
+  input.addEventListener('blur', done);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+}
+
+document.getElementById('newGroupInput').addEventListener('keydown', e => { if (e.key === 'Enter') addGroup(); });
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('show');
+});
+
+applyLang();
+render();
+
+// ── PWA SETUP ──
+(function() {
+  function makeIcon(size) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const r = size * 0.25;
+    ctx.fillStyle = '#1A1A2E';
+    ctx.beginPath();
+    ctx.moveTo(r,0); ctx.lineTo(size-r,0);
+    ctx.quadraticCurveTo(size,0,size,r); ctx.lineTo(size,size-r);
+    ctx.quadraticCurveTo(size,size,size-r,size); ctx.lineTo(r,size);
+    ctx.quadraticCurveTo(0,size,0,size-r); ctx.lineTo(0,r);
+    ctx.quadraticCurveTo(0,0,r,0); ctx.closePath(); ctx.fill();
+    ctx.font = `${size*0.55}px serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('✏️', size/2, size/2 + size*0.04);
+    return c.toDataURL('image/png');
+  }
+  try {
+    const icon192 = makeIcon(192), icon512 = makeIcon(512);
+    document.getElementById('appleIcon').href = icon192;
+    const manifest = { name:'مدرسة قرآنية', short_name:'مدرسة قرآنية', description:'Track student mistakes across groups', start_url:'./', display:'standalone', background_color:'#1A1A2E', theme_color:'#1A1A2E', orientation:'portrait', icons:[{src:icon192,sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:icon512,sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
+    const blob = new Blob([JSON.stringify(manifest)],{type:'application/json'});
+    const link = document.createElement('link');
+    link.rel='manifest'; link.href=URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  } catch(e) {}
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
