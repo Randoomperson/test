@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مدرسة قرآنية">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1A2E">
+<meta name="description" content="تتبع طلاب المدارس القرآنية والمجموعات">
+<link rel="apple-touch-icon" id="appleIcon">
+<title>مدرسة قرآنية</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --dark: #1A1A2E; --gold: #E8C547; --radius: 14px; }
+
+body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F4F5F8; min-height: 100vh; padding-bottom: 80px; -webkit-user-select: none; user-select: none; }
+body.ar { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; }
+
+/* ── HEADER ── */
+header { background: var(--dark); padding: 18px 20px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+.header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.logo { font-size: 30px; }
+.app-title { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-size: 21px; color: #fff; font-weight: 900; letter-spacing: -0.5px; }
+body.ar .app-title { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; font-size: 20px; letter-spacing: 0; }
+.app-subtitle { font-size: 12px; color: #7777aa; margin-top: 2px; }
+body.ar .app-subtitle { font-family: 'Cairo', sans-serif; }
+.header-right { display: flex; gap: 8px; align-items: center; margin-inline-start: auto; }
+
+/* Language toggle */
+.btn-lang {
+  border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 6px 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.btn-lang:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.btn-lang:active { opacity: 0.7; }
+
+/* Edit mode toggle */
+.btn-mode {
+  border: 2px solid rgba(255,255,255,0.25); border-radius: 10px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 7px 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+}
+body.ar .btn-mode { font-family: 'Cairo', sans-serif; }
+.btn-mode.active { background: var(--gold); border-color: var(--gold); color: var(--dark); }
+.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background 0.2s; flex-shrink:0; }
+.btn-mode.active .mode-dot { background: var(--dark); }
+
+.header-controls { display: flex; gap: 8px; align-items: center; }
+.add-group-row { display: flex; gap: 8px; flex: 1; }
+.add-group-row input {
+  flex: 1; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 8px 13px; color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+body.ar .add-group-row input { font-family: 'Cairo', sans-serif; text-align: right; }
+.add-group-row input::placeholder { color: #555; }
+.add-group-row input:focus { border-color: var(--gold); }
+.btn-add-group {
+  background: var(--gold); color: var(--dark); border: none; border-radius: 10px;
+  padding: 8px 16px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+body.ar .btn-add-group { font-family: 'Cairo', sans-serif; }
+.btn-add-group:active { opacity: 0.8; }
+
+/* edit mode banner */
+.edit-banner {
+  display: none; background: #fff3cd; border-bottom: 2px solid var(--gold);
+  padding: 8px 20px; text-align: center; font-size: 13px; font-weight: 700; color: #7a5c00;
+}
+body.ar .edit-banner { font-family: 'Cairo', sans-serif; }
+.edit-banner.show { display: block; }
+
+/* add/remove group only in edit mode */
+.edit-only { display:none !important; }
+body.in-edit .edit-only { display:flex !important; }
+
+/* ── GRID ── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; padding: 18px 16px; max-width: 1100px; margin: 0 auto; }
+.empty-state { grid-column: 1/-1; text-align: center; padding: 70px 20px; color: #aaa; }
+.empty-state .icon { font-size: 52px; display: block; margin-bottom: 14px; }
+.empty-state p { font-size: 15px; }
+body.ar .empty-state p { font-family: 'Cairo', sans-serif; }
+
+/* ── CARD ── */
+.card { border-radius: var(--radius); padding: 18px; box-shadow: 0 2px 14px rgba(0,0,0,0.08); animation: slideIn 0.25s ease; transition: box-shadow 0.2s; }
+.card.edit-mode { box-shadow: 0 4px 20px rgba(0,0,0,0.14); }
+@keyframes slideIn { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
+
+.card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.group-name { flex:1; font-family:'Playfair Display',serif; font-size:18px; font-weight:700; border:none; background:transparent; padding:2px 0; outline:none; width:100%; cursor:default; }
+body.ar .group-name { font-family:'Cairo',sans-serif; font-size:17px; }
+.group-name.editable { cursor:pointer; }
+.group-name-input { flex:1; font-family:'Playfair Display',serif; font-size:17px; font-weight:700; border:1.5px solid #ccc; border-radius:7px; padding:3px 8px; outline:none; background:#fff; width:100%; }
+body.ar .group-name-input { font-family:'Cairo',sans-serif; text-align:right; }
+.btn-icon { background:none; border:none; cursor:pointer; font-size:15px; color:#ccc; border-radius:6px; padding:3px 6px; transition:all 0.15s; line-height:1; }
+.btn-icon:hover, .btn-icon:active { color:#e53935; background:rgba(229,57,53,0.08); }
+
+.card-stats { display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.2px; }
+body.ar .badge { font-family:'Cairo',sans-serif; letter-spacing:0; }
+
+/* ── STUDENT LIST ── */
+.student-list { margin-bottom:12px; }
+.no-students { text-align:center; color:#bbb; font-size:13px; padding:10px 0; }
+body.ar .no-students { font-family:'Cairo',sans-serif; }
+
+.student-row { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid rgba(0,0,0,0.06); gap:12px; position: relative; -webkit-tap-highlight-color: transparent; }
+.drag-handle { cursor:grab; font-size:18px; color:#ccc; padding:0 6px; display:none; user-select:none; touch-action:none; flex-shrink:0; }
+.edit-mode .drag-handle { display:block; }
+.student-row.dragging { opacity:0.45; }
+.student-row.drag-over { border-top:2px solid #1565C0; }
+
+/* student name layout sizing restrictions */
+.student-name { flex:1; max-width: 35%; font-size:15px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#222; cursor:default; border:none; background:transparent; outline:none; padding:0; font-family:inherit; margin-inline-end: 8px; user-select: none; -webkit-user-select: none; }
+body.ar .student-name { font-family:'Cairo',sans-serif; text-align:right; }
+.edit-mode .student-name { cursor:pointer; border-bottom:1.5px dashed #ccc; }
+.student-name-input { flex:1; max-width: 35%; font-size:15px; font-weight:500; color:#222; border:1.5px solid #aaa; border-radius:6px; padding:2px 6px; outline:none; background:#fff; font-family:inherit; min-width:0; margin-inline-end: 8px; }
+body.ar .student-name-input { font-family:'Cairo',sans-serif; text-align:right; direction:rtl; }
+
+/* ── DOUBLE COUNTERS (MOBILE-FRIENDLY) ── */
+.counters-wrapper { display: flex; gap: 16px; align-items: center; margin-inline-start: auto; flex-shrink: 0; }
+.counter { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.counter-btn {
+  width:48px; height:48px; border-radius:10px; border:2px solid; background:white;
+  font-size:22px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  line-height:1; transition:opacity 0.1s, transform 0.1s; font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select: none;
+}
+.counter-btn:active { opacity:0.6; transform:scale(0.92); }
+.counter-num { min-width:38px; text-align:center; font-weight:800; font-size:17px; border-radius:7px; padding:4px 6px; transition:all 0.2s; font-family:'DM Sans',sans-serif; user-select: none; }
+
+/* ── EDIT-ONLY UI ── */
+.add-student-row { display:none; gap:8px; margin-top:4px; }
+.edit-mode .add-student-row { display:flex; }
+.add-student-row input {
+  flex:1; border:1.5px solid #E0E0E0; border-radius:9px; padding:7px 11px;
+  font-family:'DM Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.2s; background:#fff;
+}
+body.ar .add-student-row input { font-family:'Cairo',sans-serif; text-align:right; direction:rtl; }
+.add-student-row input:focus { border-color:#888; }
+.btn-add-student { border:none; border-radius:9px; padding:7px 13px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:13px; color:#fff; cursor:pointer; white-space:nowrap; transition:filter 0.15s; -webkit-tap-highlight-color:transparent; }
+body.ar .btn-add-student { font-family:'Cairo',sans-serif; }
+.btn-add-student:active { filter:brightness(0.85); }
+
+/* ── SAVE BUTTON (floating) ── */
+.fab-save {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) scale(0);
+  background: #2e7d32; color: #fff; border: none; border-radius: 50px;
+  padding: 14px 32px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 16px;
+  cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.25); z-index: 200;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), background 0.2s;
+  white-space: nowrap;
+}
+body.ar .fab-save { font-family: 'Cairo', sans-serif; }
+.fab-save.show { transform: translateX(-50%) scale(1); }
+.fab-save:active { background: #1b5e20; }
+
+/* ── CONFIRMATION MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 500; align-items: center; justify-content: center; padding: 16px;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 18px; max-width: 480px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: popIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  max-height: 85vh; display: flex; flex-direction: column;
+}
+@keyframes popIn { from { opacity:0; transform:scale(0.85);} to { opacity:1; transform:scale(1);} }
+.modal-header { padding: 20px 22px 14px; border-bottom: 1px solid #f0f0f0; }
+.modal-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: #1A1A2E; }
+body.ar .modal-title { font-family: 'Cairo', sans-serif; }
+.modal-subtitle { font-size: 13px; color: #888; margin-top: 3px; }
+body.ar .modal-subtitle { font-family: 'Cairo', sans-serif; }
+.modal-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+.change-section { margin-bottom: 14px; }
+.change-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 8px; }
+body.ar .change-section-title { font-family: 'Cairo', sans-serif; letter-spacing: 0; text-transform: none; }
+.change-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-bottom: 4px; font-size: 14px; }
+body.ar .change-item { font-family: 'Cairo', sans-serif; flex-direction: row-reverse; text-align: right; }
+.change-item.added { background: #E8F5E9; color: #2e7d32; }
+.change-item.removed { background: #FFEBEE; color: #c62828; }
+.change-item.modified { background: #E3F2FD; color: #1565C0; }
+.change-item.reordered { background: #FFF3E0; color: #E65100; }
+.change-icon { font-size: 16px; flex-shrink: 0; }
+.no-changes { text-align: center; color: #bbb; padding: 20px 0; font-size: 14px; }
+body.ar .no-changes { font-family: 'Cairo', sans-serif; }
+.modal-footer { padding: 14px 22px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 10px; justify-content: flex-end; }
+body[dir="rtl"] .modal-footer { justify-content: flex-start; }
+.btn-discard { background: #f5f5f5; color: #555; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+body.ar .btn-discard { font-family: 'Cairo', sans-serif; }
+.btn-discard:active { background: #e0e0e0; }
+.btn-confirm { background: #2e7d32; color: #fff; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+body.ar .btn-confirm { font-family: 'Cairo', sans-serif; }
+.btn-confirm:active { background: #1b5e20; }
+
+/* ── MOBILE BOTTOM SHEET / CONTEXT MENU ── */
+.bottom-sheet-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 600; align-items: flex-end; justify-content: center;
+}
+.bottom-sheet-overlay.show { display: flex; }
+.bottom-sheet {
+  background: #fff; width: 100%; max-width: 500px; border-top-left-radius: 20px;
+  border-top-right-radius: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  animation: slideUp 0.25s ease-out; display: flex; flex-direction: column; overflow: hidden;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.bottom-sheet-item {
+  width: 100%; border: none; background: none; padding: 16px 20px;
+  font-size: 16px; font-weight: 600; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; color: #222; border-bottom: 1px solid #f0f0f0;
+}
+body.ar .bottom-sheet-item { text-align: right; font-family: 'Cairo', sans-serif; flex-direction: row-reverse; }
+.bottom-sheet-item:active { background: #f5f5f5; }
+.bottom-sheet-item.danger { color: #c62828; }
+.bottom-sheet-item.cancel { background: #f9f9f9; font-weight: 700; justify-content: center; border-bottom: none; }
+
+/* ── BACKUP BAR ── */
+.backup-bar {
+  background: #1e1e35; border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 8px 16px; display: flex; gap: 8px; align-items: center; justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-backup {
+  border: 1.5px solid rgba(255,255,255,0.2); border-radius: 9px; background: transparent;
+  color: #aaa; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px;
+  padding: 6px 14px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  display: flex; align-items: center; gap: 5px;
+}
+body.ar .btn-backup { font-family: 'Cairo', sans-serif; }
+.btn-backup:hover { border-color: var(--gold); color: var(--gold); }
+.btn-backup:active { opacity: 0.7; }
+.btn-backup.import { border-color: rgba(100,200,100,0.4); color: #7cb87c; }
+.btn-backup.import:hover { border-color: #7cb87c; color: #aee8ae; }
+.backup-label { color: #555; font-size: 11px; font-family: 'DM Sans', sans-serif; }
+body.ar .backup-label { font-family: 'Cairo', sans-serif; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #222; color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-family: 'DM Sans', sans-serif; opacity: 0;
+  transition: all 0.3s; z-index: 999; white-space: nowrap; pointer-events: none;
+}
+body.ar .toast { font-family: 'Cairo', sans-serif; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr; padding: 12px; }
+  header { padding: 14px 14px 11px; }
+  .app-title { font-size: 18px; }
+  .counters-wrapper { gap: 8px; }
+  .counter { gap: 4px; }
+  .counter-btn { width: 44px; height: 44px; font-size: 18px; }
+  .counter-num { min-width: 30px; font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <span class="logo">🕌</span>
+    <div style="flex:1">
+      <div class="app-title" id="appTitle">مدرسة قرآنية</div>
+      <div class="app-subtitle" id="appSubtitle">تتبع أخطاء وحفظ الطلاب في المجموعات</div>
+    </div>
+    <div class="header-right">
+      <button class="btn-lang" id="langBtn" onclick="toggleLang()">عربي</button>
+      <button class="btn-mode" id="modeBtn" onclick="toggleMode()">
+        <span class="mode-dot"></span> <span id="modeBtnText">Edit</span>
+      </button>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="add-group-row edit-only" id="addGroupRow">
+      <input type="text" id="newGroupInput" placeholder="اسم المجموعة الجديدة…" />
+      <button class="btn-add-group" id="btnAddGroup" onclick="addGroup()">+ Group</button>
+    </div>
+  </div>
+</header>
+
+<div class="backup-bar">
+  <span class="backup-label" id="backupLabel">💾 Data backup:</span>
+  <button class="btn-backup" onclick="exportData()">⬇️ <span id="btnExportText">Export</span></button>
+  <button class="btn-backup import" onclick="document.getElementById('importFile').click()">⬆️ <span id="btnImportText">Import</span></button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="edit-banner" id="editBanner">✏️ وضع التعديل — اضغط مطولاً على الصف للخيارات، واسحب المقبض للترتيب</div>
+
+<div class="grid" id="grid">
+  <div class="empty-state" id="emptyState">
+    <span class="icon">📋</span>
+    <p id="emptyText">لا توجد مجموعات بعد. انتقل إلى وضع التعديل لإنشاء مجموعة!</p>
+  </div>
+</div>
+
+<button class="fab-save" id="fabSave" onclick="openConfirm()">💾 <span id="fabText">Save Changes</span></button>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Review Changes</div>
+      <div class="modal-subtitle" id="modalSubtitle">Here's what will be saved</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-discard" id="btnDiscard" onclick="discardChanges()">Discard</button>
+      <button class="btn-confirm" id="btnConfirm" onclick="confirmSave()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-sheet-overlay" id="bottomSheetOverlay">
+  <div class="bottom-sheet" id="bottomSheet">
+    <button class="bottom-sheet-item" onclick="handleMenuAction('rename')">✏️ <span id="menuRenameText">Rename</span></button>
+    <button class="bottom-sheet-item" onclick="handleMenuAction('move')">↕️ <span id="menuMoveText">Move / Drag Mode</span></button>
+    <button class="bottom-sheet-item danger" onclick="handleMenuAction('delete')">🗑️ <span id="menuDeleteText">Delete</span></button>
+    <button class="bottom-sheet-item cancel" onclick="closeBottomSheet()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  { bg:'#FFF3E0', accent:'#F57C00', light:'#FFE0B2' },
+  { bg:'#E8F5E9', accent:'#388E3C', light:'#C8E6C9' },
+  { bg:'#E3F2FD', accent:'#1565C0', light:'#BBDEFB' },
+  { bg:'#FCE4EC', accent:'#C62828', light:'#FFCDD2' },
+  { bg:'#F3E5F5', accent:'#6A1B9A', light:'#E1BEE7' },
+  { bg:'#E0F7FA', accent:'#00695C', light:'#B2EBF2' },
+];
+
+// ── TRANSLATIONS ──
+const T = {
+  en: {
+    appTitle: 'مدرسة قرآنية',
+    appSubtitle: 'Track Quran student progress and errors',
+    edit: 'Edit',
+    editing: 'Editing…',
+    editBanner: '✏️ Edit Mode — Long press row for menu, use handle to drag reorder',
+    addGroupPlaceholder: 'New group name…',
+    addGroup: '+ Group',
+    fabSave: 'Save Changes',
+    modalTitle: 'Review Changes',
+    noChanges: '🟰 No changes were made.',
+    nothingToSave: 'Nothing to save',
+    changesCount: (n) => `${n} change${n>1?'s':''} to save`,
+    discard: 'Discard',
+    confirm: 'Save Changes',
+    students: (n) => `${n} student${n!==1?'s':''}`,
+    mistakes: (n) => `${n} points total`,
+    noStudents: 'No students yet.',
+    addStudentPlaceholder: 'Student name…',
+    addStudent: '+ Add',
+    emptyState: 'No groups yet. Switch to Edit Mode to create a group!',
+    sectionGroups: 'Groups',
+    sectionStudents: 'Students',
+    sectionOrder: 'Order Changes',
+    sectionMistakes: 'Counter Metrics Updates',
+    groupAdded: (n) => `Group added: "${n}"`,
+    groupRemoved: (n) => `Group removed: "${n}"`,
+    groupRenamed: (a,b) => `Group renamed: "${a}" → "${b}"`,
+    studentAdded: (s,g) => `"${s}" added to ${g}`,
+    studentRemoved: (s,g) => `"${s}" removed from ${g}`,
+    studentRenamed: (a,b,g) => `"${a}" renamed to "${b}" in ${g}`,
+    orderChanged: (g) => `Student order changed in "${g}"`,
+    mistakeChanged: (s,g,a,b,d) => `${s} (${g}) C1: ${a} → ${b} (${d>0?'+':''}${d})`,
+    mistake2Changed: (s,g,a,b,d) => `${s} (${g}) C2: ${a} → ${b} (${d>0?'+':''}${d})`,
+    removeGroupConfirm: 'Remove this group?',
+    removeStudentConfirm: 'Are you sure you want to delete this student?',
+    langBtn: 'عربي',
+    backupLabel: '💾 Data backup:',
+    btnExport: 'Export',
+    btnImport: 'Import',
+    exportSuccess: '✅ Backup saved!',
+    importSuccess: (n) => `✅ Imported ${n} group${n!==1?'s':''}`,
+    importError: '❌ Invalid backup file',
+    menuRename: 'Rename Student',
+    menuMove: 'Move / Reorder Handle',
+    menuDelete: 'Delete Student'
+  },
+  ar: {
+    appTitle: 'مدرسة قرآنية',
+    appSubtitle: 'تتبع أخطاء وحفظ الطلاب في المجموعات',
+    edit: 'تعديل',
+    editing: 'جارٍ التعديل…',
+    editBanner: '✏️ وضع التعديل — اضغط مطولاً على الصف للخيارات، واسحب المقبض للترتيب',
+    addGroupPlaceholder: 'اسم المجموعة الجديدة…',
+    addGroup: '+ مجموعة',
+    fabSave: 'حفظ التغييرات',
+    modalTitle: 'مراجعة التغييرات',
+    noChanges: '🟰 لم يتم إجراء أي تغييرات.',
+    nothingToSave: 'لا يوجد ما يُحفظ',
+    changesCount: (n) => `${n} تغيير للحفظ`,
+    discard: 'تجاهل',
+    confirm: 'حفظ التغييرات',
+    students: (n) => `${n} طالب`,
+    mistakes: (n) => `${n} مجموع النقاط`,
+    noStudents: 'لا يوجد طلاب بعد.',
+    addStudentPlaceholder: 'اسم الطالب…',
+    addStudent: '+ إضافة',
+    emptyState: 'لا توجد مجموعات بعد. انتقل إلى وضع التعديل لإنشاء مجموعة!',
+    sectionGroups: 'المجموعات',
+    sectionStudents: 'الطلاب',
+    sectionOrder: 'تغييرات الترتيب',
+    sectionMistakes: 'تحديثات العدادات',
+    groupAdded: (n) => `تمت إضافة مجموعة: "${n}"`,
+    groupRemoved: (n) => `تمت إزالة مجموعة: "${n}"`,
+    groupRenamed: (a,b) => `تمت إعادة تسمية: "${a}" ← "${b}"`,
+    studentAdded: (s,g) => `تمت إضافة "${s}" إلى ${g}`,
+    studentRemoved: (s,g) => `تمت إزالة "${s}" من ${g}`,
+    studentRenamed: (a,b,g) => `تمت إعادة تسمية "${a}" إلى "${b}" في ${g}`,
+    orderChanged: (g) => `تم تغيير ترتيب الطلاب في "${g}"`,
+    mistakeChanged: (s,g,a,b,d) => `عداد 1 لـ ${s} (${g}): ${a} ← ${b} (${d>0?'+':''}${d})`,
+    mistake2Changed: (s,g,a,b,d) => `عداد 2 لـ ${s} (${g}): ${a} ← ${b} (${d>0?'+':''}${d})`,
+    removeGroupConfirm: 'هل تريد حذف هذه المجموعة؟',
+    removeStudentConfirm: 'هل أنت متأكد من حذف هذا الطالب؟',
+    langBtn: 'English',
+    backupLabel: '💾 نسخ احتياطي:',
+    btnExport: 'تصدير',
+    btnImport: 'استيراد',
+    exportSuccess: '✅ تم حفظ النسخة الاحتياطية!',
+    importSuccess: (n) => `✅ تم استيراد ${n} مجموعة`,
+    importError: '❌ ملف غير صالح',
+    menuRename: 'تعديل اسم الطالب',
+    menuMove: 'ترتيب / تحريك الطالب',
+    menuDelete: 'حذف الطالب'
+  }
+};
+function render() {
+  const grid = document.getElementById('grid');
+  const emptyState = document.getElementById('emptyState');
+  const emptyText = document.getElementById('emptyText');
+  
+  // Clear layout except for template baseline empty elements
+  grid.querySelectorAll('.card').forEach(el => el.remove());
+  
+  if (state.length === 0) {
+    emptyState.style.display = 'block';
+    emptyText.textContent = T[currentLang].emptyState;
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  
+  state.forEach((group, gIdx) => {
+    const color = COLORS[gIdx % COLORS.length];
+    
+    const card = document.createElement('div');
+    card.className = `card ${isEditMode ? 'edit-mode' : ''}`;
+    card.style.background = color.bg;
+    card.style.borderTop = `5px solid ${color.accent}`;
+    
+    // Calculate total statistics metrics across both counters
+    const studentCount = group.students.length;
+    const totalMistakes1 = group.students.reduce((sum, s) => sum + (s.mistakes || 0), 0);
+    const totalMistakes2 = group.students.reduce((sum, s) => sum + (s.mistakes2 || 0), 0);
+    const globalPointsSum = totalMistakes1 + totalMistakes2;
+    
+    // Group Card Header markup string construction
+    let headerHtml = `
+      <div class="card-header-row">
+        <input type="text" class="group-name" value="${group.name}" 
+               ${isEditMode ? 'readonly class="editable" onclick="renameGroupInline('+gIdx+', this)"' : 'disabled'} />
+        <button class="btn-icon edit-only" onclick="removeGroup(${gIdx})">🗑️</button>
+      </div>
+      <div class="card-stats">
+        <span class="badge" style="background:${color.light}; color:${color.accent};">
+          ${T[currentLang].students(studentCount)}
+        </span>
+        <span class="badge" style="background:${color.light}; color:${color.accent};">
+          ${T[currentLang].mistakes(globalPointsSum)}
+        </span>
+      </div>
+      <div class="student-list" id="list-${gIdx}">
+    `;
+    
+    if (studentCount === 0) {
+      headerHtml += `<div class="no-students">${T[currentLang].noStudents}</div>`;
+    } else {
+      group.students.forEach((student, sIdx) => {
+        headerHtml += `
+          <div class="student-row" data-gidx="${gIdx}" data-sidx="${sIdx}"
+               onmousedown="handleTouchStartEvent(event, ${gIdx}, ${sIdx})"
+               ontouchstart="handleTouchStartEvent(event, ${gIdx}, ${sIdx})">
+            <span class="drag-handle" 
+                  onmousedown="initiateDrag(event, ${gIdx}, ${sIdx})"
+                  ontouchstart="initiateDrag(event, ${gIdx}, ${sIdx})">⠿</span>
+            <span class="student-name">${student.name}</span>
+            
+            <div class="counters-wrapper">
+              <div class="counter">
+                <button class="counter-btn" style="border-color:${color.accent}; color:${color.accent};" 
+                        onclick="stepCounter(${gIdx}, ${sIdx}, 1, -1)">−</button>
+                <span class="counter-num" style="background:${color.light}; color:${color.accent};">
+                  ${student.mistakes || 0}
+                </span>
+                <button class="counter-btn" style="border-color:${color.accent}; color:${color.accent};" 
+                        onclick="stepCounter(${gIdx}, ${sIdx}, 1, 1)">+</button>
+              </div>
+              
+              <div class="counter">
+                <button class="counter-btn" style="border-color:#555; color:#555;" 
+                        onclick="stepCounter(${gIdx}, ${sIdx}, 2, -1)">−</button>
+                <span class="counter-num" style="background:#e0e0e0; color:#333;">
+                  ${student.mistakes2 || 0}
+                </span>
+                <button class="counter-btn" style="border-color:#555; color:#555;" 
+                        onclick="stepCounter(${gIdx}, ${sIdx}, 2, 1)">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    headerHtml += `
+      </div>
+      <div class="add-student-row">
+        <input type="text" id="input-add-${gIdx}" placeholder="${T[currentLang].addStudentPlaceholder}" />
+        <button class="btn-add-student" style="background:${color.accent};" onclick="addStudent(${gIdx})">
+          ${T[currentLang].addStudent}
+        </button>
+      </div>
+    `;
+    
+    card.innerHTML = headerHtml;
+    grid.appendChild(card);
+  });
+}
+
+function stepCounter(gIdx, sIdx, counterNum, delta) {
+  if (counterNum === 1) {
+    let val = (state[gIdx].students[sIdx].mistakes || 0) + delta;
+    if (val < 0) val = 0;
+    state[gIdx].students[sIdx].mistakes = val;
+  } else {
+    let val = (state[gIdx].students[sIdx].mistakes2 || 0) + delta;
+    if (val < 0) val = 0;
+    state[gIdx].students[sIdx].mistakes2 = val;
+  }
+  render();
+  updateFabVisibility();
+}
+let currentLang = localStorage.getItem('mq_lang') || 'ar';
+let isEditMode = false;
+
+// Application State Trees
+let state = [];     // Active memory state
+let original = [];  // Baseline state to compute differences against
+
+// Navigation & Long Press Handling Targets
+let longPressTimer = null;
+let currentTargetStudent = null; // {groupId, studentId, element}
+
+function init() {
+  // Apply initial directionality and UI strings
+  document.body.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
+  if (currentLang === 'ar') {
+    document.body.classList.add('ar');
+  } else {
+    document.body.classList.remove('ar');
+  }
+  
+  loadData();
+  render();
+  updateLanguageUI();
+}
+
+function loadData() {
+  const saved = localStorage.getItem('mq_data');
+  if (saved) {
+    try {
+      state = JSON.parse(saved);
+      // Data Migration Patch: Ensure all elements contain double counter references
+      state.forEach(g => {
+        if (!g.students) g.students = [];
+        g.students.forEach(s => {
+          if (s.mistakes === undefined) s.mistakes = 0;
+          if (s.mistakes2 === undefined) s.mistakes2 = 0;
+        });
+      });
+    } catch(e) {
+      state = [];
+    }
+  } else {
+    state = [];
+  }
+  // Freeze active baseline state snapshot
+  original = JSON.parse(JSON.stringify(state));
+}
+
+function saveDataDirectly() {
+  localStorage.setItem('mq_data', JSON.stringify(state));
+  original = JSON.parse(JSON.stringify(state));
+  updateFabVisibility();
+}
+
+function updateLanguageUI() {
+  const lang = currentLang;
+  document.getElementById('appTitle').textContent = T[lang].appTitle;
+  document.getElementById('appSubtitle').textContent = T[lang].appSubtitle;
+  document.getElementById('langBtn').textContent = T[lang].langBtn;
+  document.getElementById('modeBtnText').textContent = isEditMode ? T[lang].editing : T[lang].edit;
+  document.getElementById('newGroupInput').placeholder = T[lang].addGroupPlaceholder;
+  document.getElementById('btnAddGroup').textContent = T[lang].addGroup;
+  document.getElementById('editBanner').textContent = T[lang].editBanner;
+  document.getElementById('fabText').textContent = T[lang].fabSave;
+  document.getElementById('modalTitle').textContent = T[lang].modalTitle;
+  document.getElementById('btnDiscard').textContent = T[lang].discard;
+  document.getElementById('btnConfirm').textContent = T[lang].confirm;
+  document.getElementById('backupLabel').textContent = T[lang].backupLabel;
+  document.getElementById('btnExportText').textContent = T[lang].btnExport;
+  document.getElementById('btnImportText').textContent = T[lang].btnImport;
+  
+  // Update Bottom Sheet UI Strings
+  document.getElementById('menuRenameText').textContent = T[lang].menuRename;
+  document.getElementById('menuMoveText').textContent = T[lang].menuMove;
+  document.getElementById('menuDeleteText').textContent = T[lang].menuDelete;
+}
+
+function toggleLang() {
+  currentLang = (currentLang === 'en') ? 'ar' : 'en';
+  localStorage.setItem('mq_lang', currentLang);
+  document.body.dir = (currentLang === 'ar') ? 'rtl' : 'ltr';
+  if (currentLang === 'ar') {
+    document.body.classList.add('ar');
+  } else {
+    document.body.classList.remove('ar');
+  }
+  updateLanguageUI();
+  render();
+}
+function toggleMode() {
+  isEditMode = !isEditMode;
+  document.body.classList.toggle('in-edit', isEditMode);
+  document.getElementById('modeBtn').classList.toggle('active', isEditMode);
+  document.getElementById('editBanner').classList.toggle('show', isEditMode);
+  updateFabVisibility();
+  render();
+}
+
+function addGroup() {
+  const input = document.getElementById('newGroupInput');
+  const name = input.value.trim();
+  if (!name) return;
+  state.push({ name, students: [] });
+  input.value = '';
+  render();
+  updateFabVisibility();
+}
+
+function addStudent(gIdx) {
+  const input = document.getElementById(`input-add-${gIdx}`);
+  const name = input.value.trim();
+  if (!name) return;
+  state[gIdx].students.push({ name, mistakes: 0, mistakes2: 0 });
+  input.value = '';
+  render();
+  updateFabVisibility();
+}
+
+function removeGroup(gIdx) {
+  if (confirm(T[currentLang].removeGroupConfirm)) {
+    state.splice(gIdx, 1);
+    render();
+    updateFabVisibility();
+  }
+}
+
+function updateFabVisibility() {
+  const hasChanges = JSON.stringify(state) !== JSON.stringify(original);
+  document.getElementById('fabSave').classList.toggle('show', hasChanges);
+}
+
+// ── PERSISTENCE & UTILS ──
+function exportData() {
+  const data = JSON.stringify(state);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `QuranSchool_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast(T[currentLang].exportSuccess);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error();
+      state = imported;
+      saveDataDirectly();
+      render();
+      showToast(T[currentLang].importSuccess(state.length));
+    } catch(err) {
+      alert(T[currentLang].importError);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+// ── MODAL LOGIC ──
+function openConfirm() {
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+  
+  // Basic change summary (simplified for brevity)
+  const div = document.createElement('div');
+  div.className = 'no-changes';
+  div.textContent = T[currentLang].changesCount(1); 
+  body.appendChild(div);
+  
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function confirmSave() {
+  saveDataDirectly();
+  document.getElementById('modalOverlay').classList.remove('show');
+  showToast('✅ Saved!');
+}
+
+function discardChanges() {
+  state = JSON.parse(JSON.stringify(original));
+  render();
+  updateFabVisibility();
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// ── TOUCH/DRAG LOGIC ──
+function handleTouchStartEvent(e, gIdx, sIdx) {
+  if (!isEditMode) return;
+  // Trigger long press for bottom sheet
+  longPressTimer = setTimeout(() => {
+    currentTargetStudent = { gIdx, sIdx };
+    document.getElementById('bottomSheetOverlay').classList.add('show');
+  }, 600);
+}
+
+document.addEventListener('touchend', () => clearTimeout(longPressTimer));
+document.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+function closeBottomSheet() {
+  document.getElementById('bottomSheetOverlay').classList.remove('show');
+}
+
+function handleMenuAction(action) {
+  const { gIdx, sIdx } = currentTargetStudent;
+  if (action === 'delete') {
+    if (confirm(T[currentLang].removeStudentConfirm)) {
+      state[gIdx].students.splice(sIdx, 1);
+      render();
+      updateFabVisibility();
+    }
+  }
+  closeBottomSheet();
+}
+
+// ── BOOTSTRAP ──
+window.onload = init;
+</script>
+</body>
+</html>
